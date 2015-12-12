@@ -1,2 +1,2 @@
-# wp-consent-receipt
-Consent Receipt Plugin for Wordpress 
+# WP Consent Receipt
+A Consent Receipt Plugin for Wordpress 
