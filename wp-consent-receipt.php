@@ -9,7 +9,7 @@ Author URI: http://www.olivermaerz.com
 License: GPL2
 */
 /*
-Copyright 2015  Oliver Maerz  (email : om-cr@berlinco.com)
+Copyright (c) 2015  Oliver Maerz  (email : om-wpcr@berlinco.com)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License, version 2, as 
