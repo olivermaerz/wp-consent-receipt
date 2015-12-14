@@ -5,7 +5,7 @@ The WP Consent Receipt plugin be called from theme or other plugin via filter ho
 
 ```php
 if (has_filter('wp_consent_receipt_button')) {
-  $html = apply_filters('wp_consent_receipt_button', $html, $consentReceiptData);
+	$html = apply_filters('wp_consent_receipt_button', $html, $consentReceiptData);
 }
 ```
 
