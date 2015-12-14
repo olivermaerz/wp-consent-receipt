@@ -2,3 +2,6 @@
 	path = php-jwt
 	url = https://github.com/firebase/php-jwt
 	
+[submodule "phpseclib"]
+	path = phpseclib
+	url = https://github.com/phpseclib/phpseclib
