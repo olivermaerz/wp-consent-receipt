@@ -1,7 +1,7 @@
 # WP Consent Receipt
 A Consent Receipt plugin for Wordpress 
 
-The WP Consent Receipt plugin be called from themes or other plugins via the wp_consent_receipt_button filter hook: 
+The WP Consent Receipt plugin can be called from themes and other plugins via the wp_consent_receipt_button filter hook: 
 
 ```php
 if (has_filter('wp_consent_receipt_button')) {
@@ -9,7 +9,7 @@ if (has_filter('wp_consent_receipt_button')) {
 }
 ```
 
-$consentReceiptData is an associative array. Here some sample data:
+Example data for the $consentReceiptData associative array:
 
 ```php
 $consentReceiptData = array(
@@ -55,3 +55,4 @@ $consentReceiptData = array(
 ); // End consentReceiptData array
 
 ```
+
