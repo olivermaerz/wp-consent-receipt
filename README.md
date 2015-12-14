@@ -1,7 +1,7 @@
 # WP Consent Receipt
 A Consent Receipt plugin for Wordpress 
 
-The WP Consent Receipt plugin be called from theme or other plugin via filter hook: 
+The WP Consent Receipt plugin be called from themes or other plugins via the wp_consent_receipt_button filter hook: 
 
 ```php
 if (has_filter('wp_consent_receipt_button')) {
