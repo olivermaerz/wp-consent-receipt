@@ -28,7 +28,7 @@ $consentReceiptData = array(
 		'company' => 'Kantara Initiative',
 		'address' => '445 Hoes Lane, Piscataway, NJ 08854',
 		'email' => 'privacy-controller@kantarainitiative.org',
-		'phone' => '+1 (732) 465-5817',
+		'phone' => '+1 (212) 111-1111',
 	),
 	'consent_payload' => array(
 		'Privacy Policy' => 'agree',
@@ -40,7 +40,7 @@ $consentReceiptData = array(
 		'name' => 'Karl Napp',
 		'email' => 'karl.napp@test.com',
 		'organization' => 'Magic Theater',
-		'telephone' => '(212) 123-4567',
+		'telephone' => '+1 (212) 123-4567',
 	),
 	'sensitive' => array(
 			'ip address', 
