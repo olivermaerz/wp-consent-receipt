@@ -135,7 +135,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 		 * text for admin menu
 		 */   
 		public function admin_section_text() {
-			echo 'At this point configuration options are limited to the URI for the Consent Receipt API (for example <code>https://mvcr.herokuapp.com/api</code>) and URI for the key (for example <code>https://mvcr.herokuapp.com/api/jwk</code>). For the latest consent receipt specs please see <a href="https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification">https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification</a>.';
+			echo 'At this point configuration options are limited to the URI for the Consent Receipt API (for example <code>http://mvcr7.herokuapp.com/api/api</code>) and URI for the key (for example <code>http://mvcr7.herokuapp.com/api/jwk</code>). For the latest consent receipt specs please see <a href="https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification">https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification</a>.';
 		} // END public function admin_section_text()
 
 		/**
