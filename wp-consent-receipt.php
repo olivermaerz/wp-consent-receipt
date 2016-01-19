@@ -3,7 +3,7 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.9
+Version: 0.10
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
@@ -199,8 +199,10 @@ if(!class_exists('WP_Consent_Receipt')) {
 			    ),
 			);
 
+
 			$context  = stream_context_create($options);
 			$result = file_get_contents(get_option('api_uri'), false, $context);
+
 			$keyArray = $this->get_key();
 			
 			// extract the key
@@ -257,20 +259,23 @@ if(!class_exists('WP_Consent_Receipt')) {
 						</tr>
 
 						<tr>
+							<td>Consent was collected via</td>
+							<td>' .  $receipt['moc'] . '</td>
+						</tr>
+
+						<tr>
 							<td>ID of natural person</td>
 							<td>' .  $receipt['sub'] . '</td>
 						</tr>
 
-
-						<tr>
-							<td>Privacy Policy Link</td>
-							<td>' . $receipt['policy_uri'] . '</td>
-						</tr>
-
-
 						<tr>
 							<td>Link to Short Privacy Notice</td>
 							<td>' . $receipt['notice'] . '</td>
+						</tr>
+
+						<tr>
+							<td>Policy Link</td>
+							<td>' . $receipt['policy_uri'] . '</td>
 						</tr>
 
 						<tr>
@@ -296,19 +301,6 @@ if(!class_exists('WP_Consent_Receipt')) {
 						</tr>
 
 						<tr>
-							<td>Consent transaction data</td>
-							<td>';
-
-			foreach($receipt['consent_payload'] as $payloadKey => $payloadValue) {
-			   $receiptHtml .= "$payloadKey: $payloadValue<br>\n";
-			}
-
-			$receiptHtml .= '					
-							</td>
-						</tr>
-
-
-						<tr>
 							<td>Purpose</td>
 							<td>';
 
@@ -320,20 +312,6 @@ if(!class_exists('WP_Consent_Receipt')) {
    			$receiptHtml .= '
 							</td>
 						</tr>
-
-
-						<tr>
-							<td>PII categories</td>
-							<td>';
-
-			foreach($receipt['pii_collected'] as $payloadKey => $payloadValue) {
-				$receiptHtml .= "Category: $payloadKey<br>\nValue: $payloadValue<br><br>\n";
-			}
-
-			$receiptHtml .= '
-							</td>
-						</tr>
-
 
 						<tr>
 							<td>Sensitive information</td>
@@ -352,24 +330,18 @@ if(!class_exists('WP_Consent_Receipt')) {
 							<td>3rd party sharing of personal information</td>
 							<td>';
 
-			foreach($receipt['sharing'] as $payloadValue) {
-    			$receiptHtml .= "$payloadValue<br>\n";
+			foreach($receipt['sharing'] as $key => $payloadValue) {
+    			$receiptHtml .= "$key: $payloadValue<br>\n";
    			}
 
-   			$receiptHtml .= '
-							</td>
-						</tr>
+   			
 
-						<tr>
-							<td>Consent Context</td>
-							<td>';
-
-			foreach($receipt['context'] as $payloadValue) {
-				$receiptHtml .= "$payloadValue<br>\n";
-			}
+			
 
 			$receiptHtml .= '
-							</td>
+						<tr>
+							<td>Scopes</td>
+							<td>' . $receipt['scopes'] . '</td>
 						</tr>
 
 						<tr>
