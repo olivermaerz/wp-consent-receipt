@@ -3,13 +3,13 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.10
+Version: 0.20
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
 */
 /*
-Copyright (c) 2015  Oliver Maerz  (email : om-wpcr@berlinco.com)
+Copyright (c) 2015, 2016 Oliver Maerz  (email : om-wpcr@berlinco.com)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License, version 2, as 
@@ -65,6 +65,13 @@ if(!class_exists('WP_Consent_Receipt')) {
 			// register filters
 			add_filter('wp_consent_receipt_button', array($this, 'create_button'), 9, 2);
 
+			// add action for the receipt download
+			add_action('template_redirect', array($this, 'cr_downoad_redirect'));
+
+			// activate session 
+			add_action('init', array($this, 'register_session'), 1);
+
+
         } // END public function __construct
     
         /**
@@ -90,18 +97,31 @@ if(!class_exists('WP_Consent_Receipt')) {
 		} // END public static function activate
 
 
+		// start the session
+		public function register_session(){
+    		if( !session_id() )
+        		session_start();
+		}
+
 		/**
 		 * Initialize some custom settings
 		 */     
 		public function init_settings() {
 		    // register the settings for this plugin
 
-			
-			
+			// locally stored keys
+			register_setting('wp_consent_receipt', 'private_key');
+		    register_setting('wp_consent_receipt', 'public_key');
+
+		    // key to be retrieved via http
 		    register_setting('wp_consent_receipt', 'key_uri');
+		    // api uri to call
 		    register_setting('wp_consent_receipt', 'api_uri');
 
 		    add_settings_section('wp_consent_receipt_main', 'Main Settings', array(&$this, 'admin_section_text'), 'wp_consent_receipt');
+
+		    add_settings_field('private_key', 'Private Key', array(&$this, 'admin_private_key_field'), 'wp_consent_receipt', 'wp_consent_receipt_main');
+			add_settings_field('public_key', 'Public Key', array(&$this, 'admin_public_key_field'), 'wp_consent_receipt', 'wp_consent_receipt_main');
 			add_settings_field('api_uri', 'API URI', array(&$this, 'admin_api_uri_field'), 'wp_consent_receipt', 'wp_consent_receipt_main');
 			add_settings_field('key_uri', 'Key URI', array(&$this, 'admin_key_uri_field'), 'wp_consent_receipt', 'wp_consent_receipt_main');
 
@@ -135,8 +155,27 @@ if(!class_exists('WP_Consent_Receipt')) {
 		 * text for admin menu
 		 */   
 		public function admin_section_text() {
-			echo 'At this point configuration options are limited to the URI for the Consent Receipt API (for example <code>http://mvcr7.herokuapp.com/api/api</code>) and URI for the key (for example <code>http://mvcr7.herokuapp.com/api/jwk</code>). For the latest consent receipt specs please see <a href="https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification">https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification</a>.';
+			//echo 'At this point configuration options are limited to the URI for the Consent Receipt API (for example <code>http://mvcr7.herokuapp.com/api/api</code>) and URI for the key (for example <code>http://mvcr7.herokuapp.com/api/jwk</code>). For the latest consent receipt specs please see <a href="https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification">https://github.com/KantaraInitiative/CISWG/tree/master/ConsetReceipt/specification</a>.';
+			echo 'Only private key field and public key field are used at this time. URI fields are ignored.';
 		} // END public function admin_section_text()
+
+
+		/**
+		 * display the private_key_ field for admin menu
+		 */   
+		public function admin_private_key_field() {
+			//echo 'crap';
+			echo '<textarea cols="80" rows="15" name="private_key" id="key_uri" class="regular-text code">' . get_option('private_key') . '</textarea>';
+		} // END public function  admin_private_key_field()
+
+
+		/**
+		 * display the public_key_ field for admin menu
+		 */   
+		public function admin_public_key_field() {
+			//echo 'crap';
+			echo '<textarea cols="80" rows="5" name="public_key" id="key_uri" class="regular-text code">' . get_option('public_key') . '</textarea>';
+		} // END public function  admin_public_key_field()
 
 		/**
 		 * display the key_uri field for admin menu
@@ -165,7 +204,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 		} // END private function add_javascript()
 
 		/**
-		 * get the key to verify Consent Receipt
+		 * get the external public key (via http request) to verify Consent Receipt
 		 */  
 		private function get_key() {
 			$content = file_get_contents(get_option('key_uri'));
@@ -174,6 +213,21 @@ if(!class_exists('WP_Consent_Receipt')) {
 			return ($key);
 		} // END private function get_key()
 
+		/**
+		 * get the private key stored in the config
+		 */  
+		private function get_private_key() {
+			$key = get_option('private_key');
+			return ($key);
+		} // END private function get_private_key()
+
+		/**
+		 * get the public key stored in the config
+		 */  
+		private function get_public_key() {
+			$key = get_option('public_key');
+			return ($key);
+		} // END private function get_public_key()
 
 		/**
 		 * Decode the received Consent Receipt JWT 
@@ -184,6 +238,31 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 			return $decodedArray;
 		} // END private function decode_jwt()
+
+
+		/**
+		 * Encode Consent Receipt  
+		 */  
+		private function encode_jwt($array, $key) {
+			$jwt = Firebase\JWT\JWT::encode($array, $key, 'RS256');
+
+			return $jwt;
+		} // END private function encode_jwt()
+
+
+
+		/**
+		 * Generate Consent Receipt
+		 */
+		private function generate_receipt($consentReceiptData) {
+
+			$privateKey = $this->get_private_key();
+
+			$encoded = $this->encode_jwt($consentReceiptData, $privateKey);
+
+			return array($consentReceiptData,$encoded);
+
+		}
 
 		
 		/**
@@ -234,12 +313,37 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 
 	    /**
+	     *  download consent receipt 
+	     */
+	    public function cr_downoad_redirect() {
+			if ($_SERVER['REQUEST_URI']=='/downloads/KantaraInitiativeConsentReceipt.jwt') {
+				if( !session_id())
+        			session_start();
+
+				header("Content-type: application/jwt",true,200);
+				header("Content-Disposition: attachment; filename=KantaraInitiativeConsentReceipt.jwt");
+				header("Pragma: no-cache");
+				header("Expires: 0");
+
+				
+
+				echo $_SESSION['receiptRaw'];
+				exit();
+		 	}
+		}
+
+	    /**
 		 * Create a button and consent receipt table 
 		 */ 
 	    public function create_button($html, $consentReceiptData) {
 	    	// create the consent receipt button 
 	    	try {
-				list($receipt,$receiptRaw) = $this->make_jason_http_request($consentReceiptData);
+
+	    		// call API
+				//list($receipt,$receiptRaw) = $this->make_jason_http_request($consentReceiptData);
+
+	    		// generate Receipt
+	    		list($receipt,$receiptRaw) = $this->generate_receipt($consentReceiptData);
 
 				// stick the raw receipt into the session
 				$_SESSION['receiptRaw'] = $receiptRaw;
@@ -247,7 +351,9 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 				$receiptHtml = '
 					<p>
-					<input type="button" name="cr" onclick="showTable(true);" value="Show Consent Receipt" id="toggleButton">
+					<button type="button" name="cr" onclick="showTable(true);" id="toggleButton">Show Consent Receipt</button>
+
+					<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>
 					</p>
 					
 					<table class="table table-hover ConsentReceipt" id="ConsentReceiptID">
