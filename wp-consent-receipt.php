@@ -3,7 +3,7 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.20
+Version: 0.21
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
@@ -65,11 +65,17 @@ if(!class_exists('WP_Consent_Receipt')) {
 			// register filters
 			add_filter('wp_consent_receipt_button', array($this, 'create_button'), 9, 2);
 
+			// register hooks
+			add_action('wp_consent_receipt', array($this, 'get_consent_receipt'));
+
 			// add action for the receipt download
 			add_action('template_redirect', array($this, 'cr_downoad_redirect'));
 
 			// activate session 
 			add_action('init', array($this, 'register_session'), 1);
+
+			// add hack from Dan Cameron to allow string attachments for wp_mail
+			add_action( 'phpmailer_init', array($this, '_add_string_attachments') );
 
 
         } // END public function __construct
@@ -339,6 +345,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 	    	// create the consent receipt button 
 	    	try {
 
+
 	    		// call API
 				//list($receipt,$receiptRaw) = $this->make_jason_http_request($consentReceiptData);
 
@@ -347,6 +354,27 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 				// stick the raw receipt into the session
 				$_SESSION['receiptRaw'] = $receiptRaw;
+
+
+				// send email to user with receipt
+
+				// set cr so we can check later and add the cr string in the hack below _add_string_attachments
+				$attachments = array();
+				$cr_attachment = array(
+					'cr' => 1,
+				);
+				$attachments[] = wp_json_encode( $cr_attachment );
+
+				$email_message = 'Attached your Consent Receipt for ' . $receipt['data_controller']['company'];
+			
+				$headers = 'From: ' . $receipt['data_controller']['company'] . ' <' . $receipt['data_controller']['email'] . '>' . "\r\n";
+				//$headers .= 'Content-type: text/html' . "\r\n";
+
+				if (!$consentReceiptData['no_email']) {
+					// Does want to receive the CR by email
+					wp_mail( $receipt['sub'] , 'Your Consent Receipt', $email_message, $headers, $attachments );
+				}
+
 
 
 				$receiptHtml = '
@@ -386,7 +414,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 						<tr>
 							<td>Data Controller</td>
-							<td>Contact name: ' . $receipt['data_controller']->contact;
+							<td>Contact name: ' . $receipt['data_controller']['contact'];
 
 			if ($receipt['data_controller']->on_behalf){
 				$receiptHtml .= " (is not acting on behalf of organization)<br>\n";
@@ -396,10 +424,10 @@ if(!class_exists('WP_Consent_Receipt')) {
 			}
 
 					
-			$receiptHtml .= "Organization name: " . $receipt['data_controller']->company . "<br>\n";
-			$receiptHtml .= "Address: " . $receipt['data_controller']->address . "<br>\n";
-			$receiptHtml .= "Contact email: " . $receipt['data_controller']->email   . "<br>\n";
-			$receiptHtml .= "Phone number: " . $receipt['data_controller']->phone   . "<br>\n";
+			$receiptHtml .= "Organization name: " . $receipt['data_controller']['company'] . "<br>\n";
+			$receiptHtml .= "Address: " . $receipt['data_controller']['address'] . "<br>\n";
+			$receiptHtml .= "Contact email: " . $receipt['data_controller']['email']   . "<br>\n";
+			$receiptHtml .= "Phone number: " . $receipt['data_controller']['phone']  . "<br>\n";
 
 			$receiptHtml .= '
 
@@ -484,6 +512,42 @@ if(!class_exists('WP_Consent_Receipt')) {
 	    	return $html;
 
 	    } // END public function create_button()
+
+
+	    // add hack from Dan Cameron to allow string attachments for wp_mail
+		function _add_string_attachments( $phpmailer ) {
+			// the previous attachment will fail since it's not an actual file
+			// we will use the error to attach it as a string
+			if ( '' !== $phpmailer->ErrorInfo ) {
+				
+				// error info
+				$error_info = $phpmailer->ErrorInfo;
+				$translations = $phpmailer->getTranslations();
+				
+				// See if there was an error attaching something to the email
+				if ( false !== stripos( $error_info, $translations['file_access'] ) ) {
+					// remove the messaging
+					$attachment_string = str_replace( $translations['file_access'], '', $error_info );
+						
+					// the result will be the json encoded string that was attempted to be attached by default
+					$attachment = json_decode( $attachment_string );
+					
+					// check if we wanted to send a consent receipt 
+					if ( isset( $attachment->cr ) ) {
+						
+						// create the string attachment
+						$file_name = 'KantaraInitiativeConsentReceipt.jwt';
+						$cr_attachment_string = $_SESSION['receiptRaw'];
+						try {
+							$phpmailer->AddStringAttachment( $cr_attachment_string, $file_name, 'base64', 'application/jwt' );	
+						} catch ( phpmailerException $e ) {
+							continue;
+						
+						}
+					}
+				}
+			}
+		}
 
     } // END class WP_Consent_Receipt
 } // END if(!class_exists('WP_Consent_Receipt'))
