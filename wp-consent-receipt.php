@@ -7,6 +7,8 @@ Version: 0.21
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
+Text Domain: wp-consent-receipt
+Domain Path: /languages
 */
 /*
 Copyright (c) 2015, 2016 Oliver Maerz  (email : om-wpcr@berlinco.com)
@@ -36,7 +38,7 @@ if(!class_exists('WP_Consent_Receipt')) {
         	set_include_path(get_include_path() . PATH_SEPARATOR . realpath(dirname(__FILE__)) . '/phpseclib' . 
         									PATH_SEPARATOR . realpath(dirname(__FILE__)) . '/php-jwt/src' );
         	// require some 3rd party libraries 
-        	// TODO: replace require_once mess with autoloader
+        	// TODO: replace require_once with autoloader
         	require_once('JWT.php');
         	require_once('phpseclib/Math/BigInteger.php');
         	require_once('phpseclib/Crypt/RSA/MSBLOB.php');
@@ -75,7 +77,10 @@ if(!class_exists('WP_Consent_Receipt')) {
 			add_action('init', array($this, 'register_session'), 1);
 
 			// add hack from Dan Cameron to allow string attachments for wp_mail
-			add_action( 'phpmailer_init', array($this, '_add_string_attachments') );
+			add_action( 'phpmailer_init', array($this, '_add_string_attachments'));
+
+			// add handler to return private key
+			add_action('parse_request', array($this, 'my_custom_url_handler'));
 
 
         } // END public function __construct
@@ -270,6 +275,31 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 		}
 
+		/** 
+		 * Generate UUID
+		 */
+		private function gen_uuid() {
+		    return sprintf( '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+		        // 32 bits for "time_low"
+		        mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ),
+
+		        // 16 bits for "time_mid"
+		        mt_rand( 0, 0xffff ),
+
+		        // 16 bits for "time_hi_and_version",
+		        // four most significant bits holds version number 4
+		        mt_rand( 0, 0x0fff ) | 0x4000,
+
+		        // 16 bits, 8 bits for "clk_seq_hi_res",
+		        // 8 bits for "clk_seq_low",
+		        // two most significant bits holds zero and one for variant DCE1.1
+		        mt_rand( 0, 0x3fff ) | 0x8000,
+
+		        // 48 bits for "node"
+		        mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff ), mt_rand( 0, 0xffff )
+		    );
+		}
+
 		
 		/**
 		 * Make the Jason API call to the backend via http
@@ -345,8 +375,16 @@ if(!class_exists('WP_Consent_Receipt')) {
 	    	// create the consent receipt button 
 	    	try {
 
+	    		$no_email = $consentReceiptData['no_email'];
 
-	    		// call API
+	    		// get rid of  array elements we do not want to have in the receipt (configuration elements etc.)
+	    		unset($consentReceiptData['no_email']);
+
+	    		// generate the UUID and update the jti field:
+	    		$consentReceiptData['jti'] = $this->gen_uuid();
+    
+
+	    		// make request via external API 
 				//list($receipt,$receiptRaw) = $this->make_jason_http_request($consentReceiptData);
 
 	    		// generate Receipt
@@ -370,136 +408,24 @@ if(!class_exists('WP_Consent_Receipt')) {
 				$headers = 'From: ' . $receipt['data_controller']['company'] . ' <' . $receipt['data_controller']['email'] . '>' . "\r\n";
 				//$headers .= 'Content-type: text/html' . "\r\n";
 
-				if (!$consentReceiptData['no_email']) {
+				if (!$no_email) {
 					// Does want to receive the CR by email
 					wp_mail( $receipt['sub'] , 'Your Consent Receipt', $email_message, $headers, $attachments );
 				}
+				
+
+				
+
+	   			//Iterate through the array 
+	   			$this->display_receipt_data($receipt,0);
+
+
+				
 
 
 
-				$receiptHtml = '
-					<p>
-					<button type="button" name="cr" onclick="showTable(true);" id="toggleButton">Show Consent Receipt</button>
+				$html .= $receiptHtml;
 
-					<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>
-					</p>
-					
-					<table class="table table-hover ConsentReceipt" id="ConsentReceiptID">
-					<tbody>
-
-						<tr>
-							<td>Jurisdiction of organization</td>
-							<td>' . $receipt['jurisdiction'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Consent was collected via</td>
-							<td>' .  $receipt['moc'] . '</td>
-						</tr>
-
-						<tr>
-							<td>ID of natural person</td>
-							<td>' .  $receipt['sub'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Link to Short Privacy Notice</td>
-							<td>' . $receipt['notice'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Policy Link</td>
-							<td>' . $receipt['policy_uri'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Data Controller</td>
-							<td>Contact name: ' . $receipt['data_controller']['contact'];
-
-			if ($receipt['data_controller']->on_behalf){
-				$receiptHtml .= " (is not acting on behalf of organization)<br>\n";
-
-			} else {
-				$receiptHtml .= " (is acting on behalf of organization)<br>\n";
-			}
-
-					
-			$receiptHtml .= "Organization name: " . $receipt['data_controller']['company'] . "<br>\n";
-			$receiptHtml .= "Address: " . $receipt['data_controller']['address'] . "<br>\n";
-			$receiptHtml .= "Contact email: " . $receipt['data_controller']['email']   . "<br>\n";
-			$receiptHtml .= "Phone number: " . $receipt['data_controller']['phone']  . "<br>\n";
-
-			$receiptHtml .= '
-
-							</td>
-						</tr>
-
-						<tr>
-							<td>Purpose</td>
-							<td>';
-
-
-			foreach($receipt['purpose'] as $payloadValue) {
-    			$receiptHtml .= "$payloadValue<br>\n";
-   			}
-
-   			$receiptHtml .= '
-							</td>
-						</tr>
-
-						<tr>
-							<td>Sensitive information</td>
-							<td>';
-
-
-			foreach($receipt['sensitive'] as $payloadValue) {
-    			$receiptHtml .= "$payloadValue<br>\n";
-   			}
-
-   			$receiptHtml .= '
-							</td>
-						</tr>
-
-						<tr>
-							<td>3rd party sharing of personal information</td>
-							<td>';
-
-			foreach($receipt['sharing'] as $key => $payloadValue) {
-    			$receiptHtml .= "$key: $payloadValue<br>\n";
-   			}
-
-   			
-
-			
-
-			$receiptHtml .= '
-						<tr>
-							<td>Scopes</td>
-							<td>' . $receipt['scopes'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Issuer</td>
-							<td>' . $receipt['iss'] . '</td>
-						</tr>
-
-						<tr>
-							<td>Transaction number</td>
-							<td>' .  chunk_split($receipt['jti'], 40, "<br />\n") . '</td>
-						</tr>
-
-						<tr>
-							<td>Time stamp</td>
-							<td>' .  gmdate("D M j, Y G:i:s T", $receipt['iat']) . '</td>
-						</tr>
-
-					</tbody>
-					</table>';
-
-					$html .= $receiptHtml;
-
-					
-    
 			} catch (Exception $e) {
 				echo 'Error: ',  $e->getMessage(), "\n";
 			}
@@ -514,8 +440,55 @@ if(!class_exists('WP_Consent_Receipt')) {
 	    } // END public function create_button()
 
 
+	    private function display_receipt_data($receipt_array, $indent){
+	    	foreach($receipt_array as $key => $value) {
+
+	    		
+
+			    if (!is_array($value))
+			    {
+			    	echo '<div class="row">';
+			    	if ($indent > 0 ) {
+			    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
+			    	}
+
+			        echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">';
+			        if (is_string($key)) {
+			        	echo $key . ': ';
+			        }
+			        if (is_bool($value)) {
+			        	echo '</div><div class="col-sm-6 span6">';
+			        	if ($value) {
+			        		echo "Yes";
+			        	} else {
+			        		echo "No";
+			        	}
+
+			        	echo '</div></div><!-- /row -->';
+			        } else {
+			        	echo '</div><div class="col-sm-6 span6">' . $value .'</div></div><!-- /row -->';
+			        }
+			        
+			    } else {
+
+			    	if (is_string($key)) {
+			    		echo '<div class="row">';
+				    	if ($indent > 0 ) {
+				    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
+				    	}
+			    		echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">' . $key . ': </div><div class="col-sm-6 span6"></div></div><!-- /row -->';
+			    	} else {
+			    		// display something for sequential array
+
+			    	}
+			       
+			       $this->display_receipt_data($value,$indent+1);
+			    }  
+			}
+	    }
+
 	    // add hack from Dan Cameron to allow string attachments for wp_mail
-		function _add_string_attachments( $phpmailer ) {
+		public function _add_string_attachments( $phpmailer ) {
 			// the previous attachment will fail since it's not an actual file
 			// we will use the error to attach it as a string
 			if ( '' !== $phpmailer->ErrorInfo ) {
@@ -548,6 +521,14 @@ if(!class_exists('WP_Consent_Receipt')) {
 				}
 			}
 		}
+
+		// handler to return public key with custom url ...
+		public function my_custom_url_handler() {
+			if( isset($_GET['cr_public_key']) ) {
+		    	echo get_option('public_key');
+    			exit();
+			}
+		} // END function my_custom_url_handler
 
     } // END class WP_Consent_Receipt
 } // END if(!class_exists('WP_Consent_Receipt'))
