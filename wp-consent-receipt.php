@@ -479,6 +479,11 @@ if(!class_exists('WP_Consent_Receipt')) {
 			    		echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">' . $key . ': </div><div class="col-sm-6 span6"></div></div><!-- /row -->';
 			    	} else {
 			    		// display something for sequential array
+			    		echo '<div class="row">';
+				    	if ($indent > 0 ) {
+				    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
+				    	}
+			    		echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">+</div><div class="col-sm-6 span6"></div></div><!-- /row -->';
 
 			    	}
 			       
