@@ -4,7 +4,7 @@ Donate link:
 Tags: Consent Receipt, Privacy
 Requires at least: 3.0.1
 Tested up to: 4.5.1
-Stable tag: 0.21
+Stable tag: 0.23
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,7 @@ if (has_filter('wp_consent_receipt_button')) {
 }
 `
 
+This implementation of the Consent Receipt is based on the specifcation of the Kantara Initiative - Consent & Information Sharing Work Group. For more information about the Consent Receipt and for the latest specification see: http://kantarainitiative.org/confluence/display/infosharing/Consent+Receipt+Specification
 
 == Installation ==
 
@@ -55,10 +56,21 @@ if (has_filter('wp_consent_receipt_button')) {
 = 0.21 =
 * Initial Version
 
+= 0.22 =
+* Minor bugfixes
+
+= 0.23 =
+* New JSON field names, matches the updated spec from Kantara Initiative
+
+
 == Upgrade Notice ==
 
 = 0.21 =
 Initial stable release 
+
+= 0.23 =
+* New JSON field names, matches the updated spec from Kantara Initiative
+
 
 == Arbitrary section ==
 

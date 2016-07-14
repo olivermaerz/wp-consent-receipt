@@ -3,7 +3,7 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.21
+Version: 0.23
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
@@ -375,10 +375,10 @@ if(!class_exists('WP_Consent_Receipt')) {
 	    	// create the consent receipt button 
 	    	try {
 
-	    		$no_email = $consentReceiptData['no_email'];
+	    		$no_email = $consentReceiptData['noEmail'];
 
 	    		// get rid of  array elements we do not want to have in the receipt (configuration elements etc.)
-	    		unset($consentReceiptData['no_email']);
+	    		unset($consentReceiptData['noEmail']);
 
 	    		// generate the UUID and update the jti field:
 	    		$consentReceiptData['jti'] = $this->gen_uuid();
@@ -441,6 +441,8 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 
 	    private function display_receipt_data($receipt_array, $indent){
+
+	    	echo '<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>';
 	    	foreach($receipt_array as $key => $value) {
 
 	    		
@@ -519,7 +521,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 						try {
 							$phpmailer->AddStringAttachment( $cr_attachment_string, $file_name, 'base64', 'application/jwt' );	
 						} catch ( phpmailerException $e ) {
-							continue;
+							
 						
 						}
 					}
@@ -548,10 +550,3 @@ if(class_exists('WP_Consent_Receipt')) {
     // instantiate the plugin class
     $wp_consent_receipt = new WP_Consent_Receipt();
 }
-
-
-
-
-
-
-
