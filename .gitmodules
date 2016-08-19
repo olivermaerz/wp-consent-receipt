@@ -5,6 +5,3 @@
 [submodule "phpseclib"]
 	path = phpseclib
 	url = https://github.com/phpseclib/phpseclib
-[submodule "dialog-polyfill"]
-	path = dialog-polyfill
-	url = https://github.com/GoogleChrome/dialog-polyfill
