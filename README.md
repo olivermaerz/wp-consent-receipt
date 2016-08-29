@@ -13,62 +13,113 @@ Example data for the $consentReceiptData associative array:
 
 ```php
 $consentReceiptData = array(
-				// This is the legal jurisdiction under which the processing of personal data occurs
-				'jurisdiction' => 'US', 
 
-				// Timestamp of when the consent was issued
-				'iat' => time(), 
+	// 0: Version
+	'version' => '0.8',
 
-				// Is used to describe how the consent was collected i.e. webform opt in, or implicit, verbal, etc.
-				'moc' => 'web form', 
+	// 1: This is the legal jurisdiction under which the processing of personal data occurs (MUST)
+	'jurisdiction' => 'US', 
 
-				// This is the URI or Internet location of processing, i.e., one party-two party or three
-				'iss' => 'https://olivermaerz.com', 
+	// 2: Timestamp of when the consent was issued (MUST)
+	'iat' => time(), 
 
-				// Unique identifier for this consent receipt
-				'jti' => uniqid(),
+	// 3: Is used to describe how the consent was collected i.e. webform opt in, or implicit, verbal (MUST)
+	'moc' => 'web form', 
 
-				// Subject provided identifier, email address - or Claim, defined/namespaced	
-				'sub' => $email, 
+	// 4: Unique identifier for this consent receipt (MUST)
+	'jti' => '', // will be filled in by plugin 
 
-				// The identity and company of the data controller and any party nominated to be data controller on behalf of org
-				'data_controller' => array(
-					'on_behalf' => FALSE,
-					'contact' => 'Privacy Controller',
-					'company' => 'Some Company Name',
-					'address' => '1 Main St, San Antonio, TX 78000',
-					'email' => 'privacy-controller@someorganization.tx',
-					'phone' => '+1 (123) 456-7890',
+	// 5: public key url
+	'publicKey' => get_site_url() . '/?cr_public_key=true',
+
+	// 6: The identity and company of the data controller and any party nominated to be data controller on behalf of org (MUST)
+	'dataController' => array(
+		'onBehalf' => false,
+		'contact' => 'John Doe',
+		'company' => 'Kantara Initiative, Inc.',
+		'address' => '401 Edgewater Place, Suite 600, Wakefield, MA, 01880 USA',
+		'email' => 'privacy-controller@kantarainitiative.org',
+		'phone' => '+1 123-456-7890',
+	),
+
+	// 13: the internet and immediately accessible privacy policy of the service referred to by the receipt (MUST)
+	'policyUri' => $group->policy_url, 
+
+	// 14: Name of the service that requires personal information.
+	'services' => array(
+		array(
+			'serviceName' => 'Kantara Initiative ' . $group->group_name,
+			'purposes' => array(
+				array(	
+					'purpose' => 'Authority to sign Participation Agreement',
+					'consentType'  => 'Explicit',
+					'purposeCategory' => array(
+						'Affiliation',
+					),
+					'piiCategory' => array(
+						'Membership',
+					),
+					'nonCorePurpose' => false,
+					'purposeTermination' => $group->policy_url,
+					'thirdPartyDisclosure' => false,
 				),
-
-				// the internet and immediately accessible privacy policy of the service referred to by the receipt
-				'policy_uri' => $policy_url, 
-
-				// Explicit, Specific and Legitimate: interpreted here as: 'Naming the Service' and 'Stating the Active Purpose ' see Appendix A these requirements
-				'purpose' => array(
-					'Enable user to participate in Kantara Initiative discussion and/or work groups',
+				array(
+					'purpose' => 'Voting Status',
+					'consentType'  => 'Explicit',
+					'purposeCategory' => array(
+						'Core Function', 
+					),
+					'piiCategory' => array(
+						'Membership',
+					),
+					'nonCorePurpose' => true,
+					'purposeTermination' => '(when no activity)',
+					'thirdPartyDisclosure' => false,
 				),
-
-				// In many jurisdictions their are additional notice and administrative requirements for the collection, storage and processing of what are called Sensitive Personal Information Categories. These are Sensitive in the business, legal, and technical sense, but not specifically in the personal context. This list of categories are required in some jurisdiction, but, the actual notice and purpose requirements are out the scope of the MVCR.
-				'sensitive' => array(
-						'ip address', 
-						'pages visited',
+				array(
+					'purpose' => 'Agree to IPR Policy',
+					'consentType'  => 'Explicit',
+					'purposeCategory' => array(
+						'Core Function', 
+					),
+					'piiCategory' => array(
+						'Membership',
+					),
+					'nonCorePurpose' => false,
+					'purposeTermination' => 'staff@kantarainitiative.org',
+					'thirdPartyDisclosure' => false,
 				),
-
-				// This refers to the sharing of personal information collected about the individual, with another external party by the data controller (service provider). Should list categories of PII shared, from above list and under what purpose. Sharing is also a container for listing trust marks and trust protocols.
-				'sharing' => array(
-					'sharing' => 'Pages visited',
-					'party_name' => 'Google',
-					'purpose' => 'Statistics',
+				array(
+					'purpose' => 'Web statistics',
+					'consentType'  => 'Explicit',
+					'purposeCategory' => array(
+						'Improve Performance', 
+					),
+					'piiCategory' => array(
+						'Network/Service',
+					),
+					'nonCorePurpose' => false,
+					'purposeTermination' => 'staff@kantarainitiative.org',
+					'thirdPartyDisclosure' => true,
+					'3rdPartyName' => 'Google',
 				),
+			),
+		),
+	),
 
-				// Link to the short notice enables usability and layered policy. to provide enhanced transparency about data collection and information sharing practices
-				'notice' => 'https://someorganization.tx/Privacy+Policy',
+	// 21: Subject provided identifier, email address - or Claim, defined/namespaced	(MUST)
+	'sub' => 'jane.doe@gmail.xyz', 
 
-				// What you’re allowed to do on the service (these can be tied to legal / business / technical layers)
-				'scopes' => 'read write update delete', 
-					
-			); // End consentReceiptData array
+	// 23: Sensitive Data Y/N (MUST)
+	'sensitive' => false,
+
+	// 24: Category for Sensitive Information collection (MUST)
+	'spiCat' => array(
+		//emtpy
+	),
+
+		
+); // End consentReceiptData array
 
 ```
 

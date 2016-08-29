@@ -3,7 +3,7 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.23
+Version: 0.24
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
@@ -30,6 +30,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 if(!class_exists('WP_Consent_Receipt')) {
     class WP_Consent_Receipt {
+
+    	private $receiptHtml; 
+
         /**
          * Construct the plugin object
          */
@@ -53,6 +56,8 @@ if(!class_exists('WP_Consent_Receipt')) {
         	require_once('phpseclib/Crypt/RSA.php');
 
         	//print_r(get_declared_classes());
+
+        	$this->receiptHtml = '';
 
         	//restore_include_path();
 
@@ -81,6 +86,9 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 			// add handler to return private key
 			add_action('parse_request', array($this, 'my_custom_url_handler'));
+
+			// ad widget code before the end body tage
+			add_action( 'wp_footer',  array($this, 'add_cr_widget'));
 
 
         } // END public function __construct
@@ -414,25 +422,21 @@ if(!class_exists('WP_Consent_Receipt')) {
 				}
 				
 
-				
+				//Display Download Receipt button
+				$html .= '
+				<!-- Trigger the modal with a button -->
+				<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">Show Consent Receipt</button>
+
+				<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button class="btn btn-primary" type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>';
 
 	   			//Iterate through the array 
-	   			$this->display_receipt_data($receipt,0);
-
+	   			$this->receiptHtml = $this->display_receipt_data($receipt,0);
 
 				
-
-
-
-				$html .= $receiptHtml;
 
 			} catch (Exception $e) {
 				echo 'Error: ',  $e->getMessage(), "\n";
 			}
-
-
-
-		
 
 
 	    	return $html;
@@ -442,56 +446,57 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 	    private function display_receipt_data($receipt_array, $indent){
 
-	    	echo '<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>';
 	    	foreach($receipt_array as $key => $value) {
-
-	    		
 
 			    if (!is_array($value))
 			    {
-			    	echo '<div class="row">';
-			    	if ($indent > 0 ) {
-			    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
-			    	}
 
-			        echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">';
 			        if (is_string($key)) {
-			        	echo $key . ': ';
-			        }
-			        if (is_bool($value)) {
-			        	echo '</div><div class="col-sm-6 span6">';
-			        	if ($value) {
-			        		echo "Yes";
-			        	} else {
-			        		echo "No";
-			        	}
+			        	if (!$indent) {
+			        		$displayHtml .= '<h6>' . $key . '</h6>';
+				    	} else {
+				    		$displayHtml .= '<tr><td>' . $key . '</td>';
+				   		}
 
-			        	echo '</div></div><!-- /row -->';
-			        } else {
-			        	echo '</div><div class="col-sm-6 span6">' . $value .'</div></div><!-- /row -->';
+			        	
 			        }
-			        
+
+			        if (!$indent) {
+				        $displayHtml .= '<div class="well well-small">';
+				    } else {
+				    	$displayHtml .= '<td>';
+				    }
+
+			        if (is_bool($value)) {
+			        	if ($value) {
+			        		$displayHtml .= "Yes";
+			        	} else {
+			        		$displayHtml .= "No";
+			        	}
+			        } else {
+			        	$displayHtml .=  $value;
+			        }
+
+			        if (!$indent) {
+				        $displayHtml .= '</div>';
+				    } else {
+				    	$displayHtml .= '</td></tr>';
+				    }
+
 			    } else {
 
 			    	if (is_string($key)) {
-			    		echo '<div class="row">';
-				    	if ($indent > 0 ) {
-				    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
-				    	}
-			    		echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">' . $key . ': </div><div class="col-sm-6 span6"></div></div><!-- /row -->';
+						$displayHtml .= '<span class="label label-default">' . $key . '</span>';	
 			    	} else {
 			    		// display something for sequential array
-			    		echo '<div class="row">';
-				    	if ($indent > 0 ) {
-				    		echo '<!-- spacer --><div class="col-sm-' . $indent . ' span' . $indent . '"></div>';
-				    	}
-			    		echo '<div class="col-sm-' . (6-$indent) . ' span' . (6-$indent) . '">+</div><div class="col-sm-6 span6"></div></div><!-- /row -->';
-
 			    	}
 			       
-			       $this->display_receipt_data($value,$indent+1);
+			       	$displayHtml .= '<table>';
+			    	$displayHtml .= $this->display_receipt_data($value,$indent+1);
+			    	$displayHtml .= '</table>';
 			    }  
 			}
+			return $displayHtml;
 	    }
 
 	    // add hack from Dan Cameron to allow string attachments for wp_mail
@@ -537,8 +542,35 @@ if(!class_exists('WP_Consent_Receipt')) {
 			}
 		} // END function my_custom_url_handler
 
+
+		function add_cr_widget() {
+		    echo '<!-- Modal -->
+		<div class="modal hide fade" id="myModal" role="dialog">
+		<div class="modal-dialog modal-lg">
+		  <div class="modal-content">
+		    <div class="modal-header">
+		      <button type="button" class="close" data-dismiss="modal">&times;</button>
+		      <h4 class="modal-title">Consent Receipt</h4>
+		    </div>
+		    <div class="modal-body">';
+		    echo $this->receiptHtml;
+		    echo '
+		    </div>
+		    <div class="modal-footer">
+		      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+		    </div>
+		  </div>
+		</div>
+		</div>';
+		}
+
+
     } // END class WP_Consent_Receipt
+
 } // END if(!class_exists('WP_Consent_Receipt'))
+
+
+
 
 
 
