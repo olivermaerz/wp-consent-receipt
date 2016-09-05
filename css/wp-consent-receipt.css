@@ -2,3 +2,6 @@
 	display: none;
 }
 
+.word-wrap {
+	word-wrap: break-word;
+}

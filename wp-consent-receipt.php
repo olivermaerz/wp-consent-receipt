@@ -3,7 +3,7 @@
 Plugin Name: WP Consent Receipt
 Plugin URI: https://olivermaerz.github.io/wp-consent-receipt/
 Description: Consent Receipt Plugin for WordPress
-Version: 0.24
+Version: 0.28
 Author: Oliver Maerz
 Author URI: http://www.olivermaerz.com
 License: GPL2
@@ -61,6 +61,11 @@ if(!class_exists('WP_Consent_Receipt')) {
 
         	//restore_include_path();
 
+        	// workaround for WP bug with mailto
+        	//add_filter( 'wp_mail_from', function() {
+    		//	return 'donotreply@kantarainitiative.org';
+			//} );
+
             // register actions
             add_action('admin_init', array($this, 'admin_init'));
 			add_action('admin_menu', array($this, 'add_menu'));
@@ -90,8 +95,19 @@ if(!class_exists('WP_Consent_Receipt')) {
 			// ad widget code before the end body tage
 			add_action( 'wp_footer',  array($this, 'add_cr_widget'));
 
+			// load translations
+ 			add_action('plugins_loaded', array($this, 'load_translations'));
+
 
         } // END public function __construct
+
+        /*
+  		 * load translation files
+         */
+		public  function load_translations() {
+			load_plugin_textdomain('wp-consent-receipt', false, 'wp-consent-receipt/languages');
+		}
+ 
     
         /**
          * Activate the plugin
@@ -162,7 +178,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 		public function plugin_settings_page() {
 		    if(!current_user_can('manage_options'))
 		    {
-		        wp_die(__('You do not have sufficient permissions to access this page.'));
+		        wp_die(__('You do not have sufficient permissions to access this page.','wp-consent-receipt'));
 		    }
 
 		    // Render the settings template
@@ -360,7 +376,7 @@ if(!class_exists('WP_Consent_Receipt')) {
 	     *  download consent receipt 
 	     */
 	    public function cr_downoad_redirect() {
-			if ($_SERVER['REQUEST_URI']=='/downloads/KantaraInitiativeConsentReceipt.jwt') {
+			if ($_SERVER['REQUEST_URI'] === '/downloads/KantaraInitiativeConsentReceipt.jwt') {
 				if( !session_id())
         			session_start();
 
@@ -402,7 +418,21 @@ if(!class_exists('WP_Consent_Receipt')) {
 				$_SESSION['receiptRaw'] = $receiptRaw;
 
 
-				// send email to user with receipt
+				
+				
+
+				//Display Download Receipt button
+				$html .= '
+				<!-- Trigger the modal with a button -->
+				<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">' . __('Show Consent Receipt', 'wp-consent-receipt') . '</button>
+
+				<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button class="btn btn-primary" type="button" name="crdl" id="download_cr">' . __('Download Consent Receipt', 'wp-consent-receipt') . '</button></a>';
+
+	   			//Iterate through the array 
+	   			$this->receiptHtml = $this->display_receipt_data($receipt,0);
+
+
+	   			// send email to user with receipt
 
 				// set cr so we can check later and add the cr string in the hack below _add_string_attachments
 				$attachments = array();
@@ -411,26 +441,21 @@ if(!class_exists('WP_Consent_Receipt')) {
 				);
 				$attachments[] = wp_json_encode( $cr_attachment );
 
-				$email_message = 'Attached your Consent Receipt for ' . $receipt['data_controller']['company'];
-			
-				$headers = 'From: ' . $receipt['data_controller']['company'] . ' <' . $receipt['data_controller']['email'] . '>' . "\r\n";
+				//$email_message = $this->receiptHtml;
+				$email_message = __('Attached your Consent Receipt for') . ' ' . $receipt['dataController']['company'];
+				
+
+				$headers = array(
+					'Content-Type: text/html; charset=UTF-8',
+					"From: {$consentReceiptData['dataController']['company']} <{$consentReceiptData['dataController']['email']}>"
+					);
 				//$headers .= 'Content-type: text/html' . "\r\n";
 
 				if (!$no_email) {
 					// Does want to receive the CR by email
 					wp_mail( $receipt['sub'] , 'Your Consent Receipt', $email_message, $headers, $attachments );
+
 				}
-				
-
-				//Display Download Receipt button
-				$html .= '
-				<!-- Trigger the modal with a button -->
-				<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">Show Consent Receipt</button>
-
-				<a href="/downloads/KantaraInitiativeConsentReceipt.jwt" download="KantaraInitiativeConsentReceipt.jwt"><button class="btn btn-primary" type="button" name="crdl" id="download_cr">Download Consent Receipt</button></a>';
-
-	   			//Iterate through the array 
-	   			$this->receiptHtml = $this->display_receipt_data($receipt,0);
 
 				
 
@@ -448,52 +473,47 @@ if(!class_exists('WP_Consent_Receipt')) {
 
 	    	foreach($receipt_array as $key => $value) {
 
+	    		if (is_string($key)) {
+	    			if ($indent) {
+		    			$displayHtml .= '<span class="label label-default">' . __($key,'wp-consent-receipt') . '</span>';	
+	    			} else {
+		    			$displayHtml .= '<span class="label label-info">' . __($key,'wp-consent-receipt') . '</span>';	
+		    		}
+	    		}
+
 			    if (!is_array($value))
 			    {
-
-			        if (is_string($key)) {
-			        	if (!$indent) {
-			        		$displayHtml .= '<h6>' . $key . '</h6>';
-				    	} else {
-				    		$displayHtml .= '<tr><td>' . $key . '</td>';
-				   		}
-
-			        	
-			        }
-
-			        if (!$indent) {
-				        $displayHtml .= '<div class="well well-small">';
-				    } else {
-				    	$displayHtml .= '<td>';
-				    }
-
+				    $displayHtml .= '<div class="well well-small word-wrap">';
+				    
 			        if (is_bool($value)) {
+			        	// value is of type boolean replace with Yes and No
 			        	if ($value) {
-			        		$displayHtml .= "Yes";
+			        		$displayHtml .= 'Yes';
 			        	} else {
-			        		$displayHtml .= "No";
+			        		$displayHtml .= 'No';
 			        	}
+			        } elseif ($key === 'iat') {
+			        	// value is time stamp convert to readable date/time
+			        	$displayHtml .=  date('m/d/Y H:i:s', ($value + 0) );
+			        } elseif (filter_var($value, FILTER_VALIDATE_URL)) { 
+			        	// value is a url ... add a href etc.
+  						$displayHtml .=  '<a href="' . esc_attr($value) . '" target="_blank">' . esc_attr($value) . '</a>'; 
 			        } else {
-			        	$displayHtml .=  $value;
+			        	$displayHtml .=  esc_attr($value);
 			        }
-
-			        if (!$indent) {
-				        $displayHtml .= '</div>';
-				    } else {
-				    	$displayHtml .= '</td></tr>';
-				    }
+			        
+				    $displayHtml .= '</div>'; 
 
 			    } else {
-
 			    	if (is_string($key)) {
-						$displayHtml .= '<span class="label label-default">' . $key . '</span>';	
+			      		// assoc array
+				       	$displayHtml .= '<div class="alert alert-info">';
+				    	$displayHtml .= $this->display_receipt_data($value,$indent+1);
+				    	$displayHtml .= '</div>';
 			    	} else {
-			    		// display something for sequential array
+			    		$displayHtml .= $this->display_receipt_data($value,$indent+1);
+			    		$displayHtml .= '<hr>';
 			    	}
-			       
-			       	$displayHtml .= '<table>';
-			    	$displayHtml .= $this->display_receipt_data($value,$indent+1);
-			    	$displayHtml .= '</table>';
 			    }  
 			}
 			return $displayHtml;

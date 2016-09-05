@@ -4,7 +4,7 @@ Donate link:
 Tags: Consent Receipt, Privacy
 Requires at least: 3.0.1
 Tested up to: 4.6
-Stable tag: 0.24
+Stable tag: 0.28
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -66,6 +66,18 @@ if (has_filter('wp_consent_receipt_button')) {
 * Support for Consent Receipt spec 0.8 from Kantara Initiative
 * New mode 1 receipt (=visual display for end user) - work in progress
 
+= 0.25 =
+* Bug fix
+
+= 0.26 =
+* Bug fix for from address when email receipt 
+
+= 0.27 =
+* Improved visual display of consent receipt (mode 1)
+
+= 0.28 =
+* Bugfix i18n
+
 
 == Upgrade Notice ==
 
@@ -78,6 +90,19 @@ Initial stable release
 = 0.24 =
 * Support for Consent Receipt spec 0.8 from Kantara Initiative
 * New mode 1 receip
+
+= 0.25 =
+* Bug fix
+
+= 0.26 =
+* Bug fix for from address when email receipt 
+
+= 0.27 =
+* Improved visual display of consent receipt (mode 1)
+
+= 0.28 =
+* Bugfix i18n
+
 
 == Arbitrary section ==
 
