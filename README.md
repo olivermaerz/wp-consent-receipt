@@ -37,7 +37,7 @@ $consentReceiptData = array(
 		'onBehalf' => false,
 		'contact' => 'John Doe',
 		'company' => 'Kantara Initiative, Inc.',
-		'address' => '401 Edgewater Place, Suite 600, Wakefield, MA, 01880 USA',
+		'address' => '401 Edgewater Place, Wakefield, MA, 01880 USA',
 		'email' => 'privacy-controller@kantarainitiative.org',
 		'phone' => '+1 123-456-7890',
 	),
